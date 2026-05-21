@@ -22,7 +22,7 @@ size = 12
 
 [terminal.shell]
 program = "pwsh.exe"
-args = ["-NoLogo", "-WorkingDirectory", "~"]
+args = ["-NoLogo"]
 
 # Colors (Tokyo Night Storm variant)
 # Source https//github.com/zatchheems/tokyo-night-alacritty-theme
