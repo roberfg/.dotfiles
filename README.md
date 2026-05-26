@@ -11,9 +11,7 @@ Configuraciones para terminal, editor de texto y herramientas de desarrollo.
 - [Alacritty](https://alacritty.org/) - Emulador de terminal
 - [Ghostty](https://ghostty.org/) - Emulador de terminal
 - [Neovim](https://neovim.io/) - Editor de texto
-- [Zed](https://zed.dev/) - Editor de código
 - [VSCodium](https://vscodium.com/) - Editor de código
-- [Oh My Posh](https://ohmyposh.dev/) - Prompt para terminal
 - [Hack Nerd Font](https://www.nerdfonts.com/font-downloads) - Tipografía
 
 ## Instalación
@@ -36,4 +34,4 @@ Ejecutar el script [windows.ps1](https://github.com/roberfu/runs/blob/main/windo
 - [ ] Agregar más plugins de LSP para lenguajes adicionales
 - [ ] Agregar configuración de tmux
 - [ ] Agregar configuración de bash
-- [ ] Agregar configuración de zed
+
