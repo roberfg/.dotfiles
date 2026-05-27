@@ -20,10 +20,6 @@ italic = { family = "LiterationMono Nerd Font", style = "Italic" }
 bold_italic = { family = "LiterationMono Nerd Font", style = "Bold Italic" }
 size = 12
 
-[terminal.shell]
-program = "pwsh.exe"
-args = ["-NoLogo"]
-
 # Colors (Tokyo Night Storm variant)
 # Source https//github.com/zatchheems/tokyo-night-alacritty-theme
 
