@@ -3,6 +3,9 @@
   "skills": {
     "generate-api-requests": {
       "path": "./skills/generate-api-requests/SKILL.md"
+    },
+    "search-subtitles": {
+      "path": "./skills/search-subtitles/SKILL.md"
     }
   }
 }
