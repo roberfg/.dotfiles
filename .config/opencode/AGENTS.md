@@ -10,7 +10,8 @@ Responde siempre en español (es) salvo que el usuario indique lo contrario.
 
 ## Comandos del sistema
 - Windows: usar PowerShell 7+ (`pwsh`). Evitar `cmd.exe` salvo que sea estrictamente necesario.
-- Tras `windows.ps1`, el PATH del usuario ya incluye winget, node, npm, java, mvn.
+- Tras `windows.ps1`, el PATH del usuario ya incluye winget, node, npm, java.
+- Maven no se instala automáticamente: descargar zip, definir `MAVEN_HOME` y añadir `%MAVEN_HOME%\bin` al PATH del sistema.
 
 ## Restricciones
 - No ejecutar comandos destructivos (`Remove-Item -Recurse`, formateos) sin confirmación explícita.

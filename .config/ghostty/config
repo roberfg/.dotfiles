@@ -8,7 +8,7 @@ cursor-style-blink = false
 
 mouse-hide-while-typing = true
 
-font-family = Hack Nerd Font
+font-family = JetBrainsMono Nerd Font
 font-size = 12
 
 background = #24283b

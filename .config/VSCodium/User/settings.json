@@ -3,7 +3,7 @@
     "workbench.colorTheme": "Atom One Dark",
     "workbench.iconTheme": "material-icon-theme",
     "workbench.startupEditor": "none",
-    "editor.fontFamily": "'Hack Nerd Font', Consolas, monospace",
+    "editor.fontFamily": "'JetBrainsMono Nerd Font', Consolas, monospace",
     "editor.fontLigatures": true,
     "material-icon-theme.activeIconPack": "none"
 }
