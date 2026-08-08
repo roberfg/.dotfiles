@@ -1,11 +1,12 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "default_agent": "plan",
   "skills": {
     "generate-api-requests": {
       "path": "./skills/generate-api-requests/SKILL.md"
     },
-    "search-subtitles": {
-      "path": "./skills/search-subtitles/SKILL.md"
+    "synchronize-subtitles": {
+      "path": "./skills/synchronize-subtitles/SKILL.md"
     }
   }
 }

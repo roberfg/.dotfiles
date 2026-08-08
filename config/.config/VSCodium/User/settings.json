@@ -1,0 +1,9 @@
+{
+    "editor.fontFamily": "JetBrainsMono Nerd Font",
+    "editor.fontSize": 14,
+    "editor.formatOnSave": true,
+    "editor.wordWrap": "bounded",
+    "workbench.iconTheme": "material-icon-theme",
+    "workbench.colorTheme": "Nord",
+    "telemetry.telemetryLevel": "off"
+}

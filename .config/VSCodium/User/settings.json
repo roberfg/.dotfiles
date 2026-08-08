@@ -1,9 +1,0 @@
-{
-    "editor.formatOnSave": true,
-    "workbench.colorTheme": "Atom One Dark",
-    "workbench.iconTheme": "material-icon-theme",
-    "workbench.startupEditor": "none",
-    "editor.fontFamily": "'JetBrainsMono Nerd Font', Consolas, monospace",
-    "editor.fontLigatures": true,
-    "material-icon-theme.activeIconPack": "none"
-}
