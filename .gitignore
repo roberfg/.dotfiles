@@ -1,0 +1,7 @@
+# VSCodium: solo se versiona la configuración manual (User/settings.json).
+# El resto (caches, logs, estado de ventanas, historial) se genera al ejecutar
+# el editor y vive en %APPDATA%\VSCodium (Windows) o ~/.config/VSCodium (Linux).
+config/.config/VSCodium/*
+!config/.config/VSCodium/User/
+config/.config/VSCodium/User/*
+!config/.config/VSCodium/User/settings.json
