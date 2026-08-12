@@ -4,6 +4,7 @@
     "editor.formatOnSave": true,
     "editor.wordWrap": "bounded",
     "workbench.iconTheme": "material-icon-theme",
-    "workbench.colorTheme": "Nord",
-    "telemetry.telemetryLevel": "off"
+    "telemetry.telemetryLevel": "off",
+    "workbench.colorTheme": "Atomize",
+    "workbench.startupEditor": "none"
 }
