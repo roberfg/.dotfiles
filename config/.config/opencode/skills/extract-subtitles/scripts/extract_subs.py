@@ -6,13 +6,12 @@ Uso:
 - Sin flags. Si no se da carpeta, usa el directorio actual.
 - Detecta automáticamente el vídeo (.mkv/.mp4/.avi/.mov/.m4v).
   Si hay varios, aborta (elección ambigua).
-- Lista las pistas de subtítulos con ffprobe y elige UNA por prioridad:
+- Lista las pistas de subtítulos con ffprobe y elige UNA pista subrip por prioridad:
   español latino > español neutro > español > inglés.
 - Si no hay ninguna pista elegible, no extrae nada y avisa.
-- Extrae con ffmpeg en copia directa (sin conversión). La extensión sale
-  del códec: subrip -> .srt, hdmv_pgs_subtitle -> .sup, ass/ssa -> .ass,
-  webvtt -> .vtt.
-- Nombra la salida <video>.es.<ext> o <video>.en.<ext>. Única validación
+- Extrae únicamente pistas subrip con ffmpeg en copia directa (sin conversión),
+  siempre como .srt. Descarta cualquier otro códec.
+- Nombra la salida <video>.es.srt o <video>.en.srt. Única validación
   de nombrado: si el nombre del vídeo contiene "2160p" (case-insensitive),
   la salida se llama igual que el vídeo (<video>.<ext>).
 - Sobrescribe el destino sin preguntar.
@@ -39,15 +38,9 @@ VIDEO_EXTS = ("mkv", "mp4", "avi", "mov", "m4v")
 # (case-insensitive), la salida se llama igual que el vídeo (<video>.<ext>).
 _4K_MARKER = "2160p"
 
-# Códec de subtítulo -> extensión del archivo extraído. Solo códecs que
-# ffmpeg puede volcar por copia directa a un archivo de subtítulos suelto.
-_CODEC_EXT: dict[str, str] = {
-    "subrip": ".srt",
-    "hdmv_pgs_subtitle": ".sup",
-    "ass": ".ass",
-    "ssa": ".ass",
-    "webvtt": ".vtt",
-}
+# Único códec aceptado y extensión del archivo extraído.
+_SUBTITLE_CODEC = "subrip"
+_SUBTITLE_EXT = ".srt"
 
 # Patrones sobre el título de la pista para distinguir las variantes de
 # español y para detectar pistas SDH en inglés (se prefieren las normales).
@@ -113,7 +106,7 @@ def _target_name(video: Path, lang2: str, ext: str) -> Path:
 
     Única validación de nombrado: si el nombre del vídeo contiene "2160p"
     (case-insensitive), la salida se llama igual que el vídeo
-    (<video>.<ext>); en cualquier otro caso, <video>.<lang2>.<ext>.
+    (<video>.srt); en cualquier otro caso, <video>.<lang2>.srt.
     """
     if _4K_MARKER in video.stem.lower():
         return video.with_suffix(ext)
@@ -158,13 +151,14 @@ def _list_subtitle_streams(video: Path) -> list[SubtitleStream]:
 # ---------------------------------------------------------------------------
 
 def _pick_stream(streams: list[SubtitleStream]) -> tuple[SubtitleStream | None, str, str]:
-    """Elige UNA pista por prioridad estricta de idioma.
+    """Elige UNA pista subrip por prioridad estricta de idioma.
 
     Orden: español latino > español neutro > español > inglés.
     Devuelve (stream, lang2, motivo). Si no hay elegible, (None, "", "").
     """
-    spa = [s for s in streams if s.language == "spa"]
-    eng = [s for s in streams if s.language == "eng"]
+    eligible = [s for s in streams if s.codec == _SUBTITLE_CODEC]
+    spa = [s for s in eligible if s.language == "spa"]
+    eng = [s for s in eligible if s.language == "eng"]
 
     for s in spa:
         if _LATINO_RE.search(s.title):
@@ -250,20 +244,12 @@ def main() -> int:
     stream, lang2, reason = _pick_stream(streams)
     if stream is None:
         print(
-            "\nNo se puede extraer ningún subtítulo: "
-            "no existen pistas en español ni en inglés."
+            "\nNo se puede extraer ningún subtítulo .srt: "
+            "no existen pistas subrip en español ni en inglés."
         )
         return 4
 
-    ext = _CODEC_EXT.get(stream.codec)
-    if ext is None:
-        print(
-            f"\nERROR: la pista elegida usa el códec {stream.codec}, "
-            "que no se puede volcar a un archivo suelto."
-        )
-        return 5
-
-    target = _target_name(video, lang2, ext)
+    target = _target_name(video, lang2, _SUBTITLE_EXT)
     title = stream.title or "(sin título)"
     print(f"\nPista elegida: #{stream.index} [{stream.language}] {title} -> {reason}")
     if target.exists():
