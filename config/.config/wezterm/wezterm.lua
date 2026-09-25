@@ -5,8 +5,8 @@ local triple = wezterm.target_triple
 
 if triple:match('windows') then
     config.default_prog = { 'pwsh.exe' }
-    config.initial_cols = 130
-    config.initial_rows = 35
+    config.initial_cols = 140
+    config.initial_rows = 40
     config.font_size = 12
     config.font = wezterm.font 'Cascadia Code'
 
