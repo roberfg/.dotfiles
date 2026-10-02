@@ -1,11 +1,11 @@
 ---
 name: synchronize-subtitles
-description: Use ONLY when the user wants to re-synchronize a local .srt file against a video file in the same folder using ffsubsync, and rename the result to <video>.es.srt — or to <video>.srt (same name as the video) if the video filename contains "2160p", which is the only naming check performed. Triggers on phrases like "sincroniza el subtítulo", "sincroniza el .srt con la película", "ajusta el timing del .srt", "re-sincroniza el subtítulo", "sync the subtitle", "fix subtitle offset". Auto-detects a single video and a single .srt in the current folder; aborts with a clear error if more than one of either is found. Supports .mkv/.mp4/.avi/.mov/.m4v. Overwrites an existing target .srt without prompting. If ffsubsync fails or is unavailable, preserves the original .srt and still renames it to the target name (better a misnamed but intact file than an aborted run).
+description: Use ONLY when the user wants to re-synchronize a local .srt file against a video file in the same folder using ffsubsync. The result is always UTF-8 with BOM and is always named <video>.es.srt. Triggers on phrases like "sincroniza el subtítulo", "sincroniza el .srt con la película", "ajusta el timing del .srt", "re-sincroniza el subtítulo", "sync the subtitle", "fix subtitle offset". Auto-detects a single video and a single .srt in the current folder; aborts with a clear error if more than one of either is found. Supports .mkv/.mp4/.avi/.mov/.m4v. Overwrites an existing target .srt without prompting. If ffsubsync fails or is unavailable, preserves the original .srt and still renames it to the target name.
 ---
 
 # Synchronize Subtitles
 
-A workflow for the agent to re-synchronize a local `.srt` against a video in the same folder using `ffsubsync`, and rename the result to `<basename>.es.srt` (or `<basename>.srt` if the video is 2160p).
+A workflow for the agent to re-synchronize a local `.srt` against a video in the same folder using `ffsubsync`, normalize it to UTF-8 with BOM, and rename the result to `<basename>.es.srt`.
 
 The user runs the bundled script. **No flags, no configuration knobs.** The script auto-detects the video and the `.srt` in the current folder (or in a folder passed as the sole argument), runs `ffsubsync` with the same parameters and thresholds used by `search-subtitles`, and renames the result.
 
@@ -13,7 +13,7 @@ The user runs the bundled script. **No flags, no configuration knobs.** The scri
 Use this skill when the user has **already** obtained a `.srt` (manually, from another site, or as a leftover from a previous download) and wants to align its timing with a local video. The user typically:
 
 - Has a folder with one video and one `.srt` that are out of sync.
-- Wants the result saved as `<video>.es.srt` (the convention auto-recognized by VLC, Plex, Kodi, Jellyfin, MPC-HC), or as `<video>.srt` when the video is 2160p.
+- Wants the result saved as `<video>.es.srt` (the convention auto-recognized by VLC, Plex, Kodi, Jellyfin, MPC-HC).
 - Does not want to (or cannot) re-download from OpenSubtitles.
 
 Do NOT use this skill when:
@@ -24,12 +24,7 @@ Do NOT use this skill when:
 - The folder contains more than one video or more than one `.srt` (ambiguous pairing; the script aborts with a clear message).
 
 ## Naming convention
-The only naming check performed is: does the video filename contain `2160p` (case-insensitive)?
-
-- **2160p video** → the output is `<video_basename>.srt` (same name as the video).
-- **Any other video** → the output is `<video_basename>.es.srt`.
-
-In both cases the output name is derived from the video, regardless of the input `.srt` name. The `.es.srt` convention matches the one used by `search-subtitles` so that media players auto-pick the right file. To re-synchronize, just run the script again; it will overwrite the existing target file.
+The output is always `<video_basename>.es.srt`, regardless of the video name or input `.srt` name. To re-synchronize, just run the script again; it will overwrite the existing target file.
 
 ## Workflow
 
@@ -61,12 +56,12 @@ The script handles everything end-to-end:
   - `ffsubsync <video> -i <srt> -o <stem>.synced.srt --skip-sync-on-low-quality --min-score=1000 --quality-max-offset-seconds=600`
   - Defence: if the computed sync has a score below 1000 or an offset above 10 minutes, `ffsubsync` writes no output (we preserve the original `.srt`).
   - Cost: ~30-40 s for a feature film (audio extraction + speech-activity detection). Language-agnostic.
-- **Encoding normalization** is run on the final `.srt` (whether the original or the synchronized one) with the same fallback chain as `search-subtitles`: `utf-8-sig` → `utf-8` → `cp1252` → `latin-1`. If the file was decoded via a single-byte encoding, it is re-written as UTF-8 so downstream consumers work with a consistent file.
-- **Renaming** moves the final `.srt` to the target name: `<video>.srt` if the video filename contains `2160p` (case-insensitive), otherwise `<video>.es.srt`. This is the only naming check. If the target file already exists, it is overwritten without prompting (per the design decision).
+- **Encoding normalization** is run on the final `.srt` (whether the original or the synchronized one) with the fallback chain `utf-8-sig` → `utf-8` → `cp1252` → `latin-1`, and it is always rewritten as UTF-8 with BOM.
+- **Renaming** moves the final `.srt` to `<video>.es.srt`. If the target file already exists, it is overwritten without prompting.
 - **Failure handling** is permissive: if `ffsubsync` is missing, returns non-zero, times out, or produces an unusable output, the script keeps the original `.srt` and still renames it to the target name. The rationale: the user asked for a file at that name; a misnamed but intact file is more useful than an aborted run that leaves the `.srt` with its original (possibly meaningless) name.
 
 ### 5. Verify and report
-- After the script finishes, list the folder and confirm the presence of the target file (`<video>.srt` for 2160p videos, `<video>.es.srt` otherwise).
+- After the script finishes, list the folder and confirm the presence of `<video>.es.srt`.
 - Show the script's own summary line: the offset applied (if any), the score, and the final filename.
 - Categories in the script's stdout:
   - `OK -> <target>.srt` — success, with the offset and score from `ffsubsync` (or a note that ffsubsync was skipped).
@@ -85,7 +80,7 @@ The script handles everything end-to-end:
 
 | Script | Purpose |
 | --- | --- |
-| `scripts/sync_subs.py` | Re-synchronizer. Auto-detects video and `.srt`, runs `ffsubsync`, renames to `<video>.srt` (2160p) or `<video>.es.srt` (rest). No flags; takes an optional folder path as the sole argument. |
+| `scripts/sync_subs.py` | Re-synchronizer. Auto-detects video and `.srt`, runs `ffsubsync`, normalizes to UTF-8 with BOM, and renames to `<video>.es.srt`. No flags; takes an optional folder path as the sole argument. |
 
 Exit codes:
 - `0` — success (synchronized or at least renamed).

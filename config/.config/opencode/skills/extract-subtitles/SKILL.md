@@ -1,18 +1,18 @@
 ---
 name: extract-subtitles
-description: Usar SOLO cuando el usuario quiera extraer UNA pista de subtítulos incrustada en un vídeo y dejarla como archivo .srt al lado del vídeo, eligiendo por prioridad estricta de idioma (español latino > español neutro > español > inglés) y sin hacer nada —con un aviso claro— si no hay ninguna pista subrip elegible. Se activa con frases como "extrae los subtítulos", "extrae el subtítulo del vídeo", "saca los subtítulos del mkv", "extract subtitles", "extract the embedded subtitle", "dump the subs". Auto-detecta un único vídeo (.mkv/.mp4/.avi/.mov/.m4v) en la carpeta actual y aborta con un error claro si hay cero o más de uno. Solo extrae pistas con códec subrip mediante copia directa con ffmpeg; descarta PGS, ASS/SSA, WebVTT y cualquier otro formato. La salida se nombra <video>.es.srt o <video>.en.srt —o <video>.srt (igual que el vídeo) si el nombre del vídeo contiene "2160p", que es la única validación de nombrado. Sobrescribe un destino existente sin preguntar.
+description: Usar SOLO cuando el usuario quiera extraer UNA pista de subtítulos española incrustada en un vídeo y dejarla como archivo .srt UTF-8 con BOM al lado del vídeo, con prioridad español latino > español neutro > español. Si no hay una pista española subrip elegible, no extrae nada. Se activa con frases como "extrae los subtítulos", "extrae el subtítulo del vídeo", "saca los subtítulos del mkv", "extract subtitles", "extract the embedded subtitle", "dump the subs". Auto-detecta un único vídeo (.mkv/.mp4/.avi/.mov/.m4v) y aborta con un error claro si hay cero o más de uno. Solo extrae pistas subrip mediante copia directa con ffmpeg; descarta inglés, PGS, ASS/SSA, WebVTT y cualquier otro formato. La salida siempre se nombra <video>.es.srt. Sobrescribe un destino existente sin preguntar.
 ---
 
 # Extract Subtitles
 
-Flujo para que el agente extraiga **una** pista `subrip` incrustada en el vídeo de una carpeta y la deje como archivo `.srt` al lado del vídeo, eligiendo por prioridad de idioma: **español latino > español neutro > español > inglés**. Si no hay ninguna pista `subrip` elegible, no extrae nada y avisa.
+Flujo para que el agente extraiga **una** pista `subrip` en español incrustada en el vídeo de una carpeta, la convierta a UTF-8 con BOM y la deje como `<video>.es.srt`, eligiendo por prioridad: **español latino > español neutro > español**. Si no hay ninguna pista española `subrip` elegible, no extrae nada y avisa.
 
 El usuario ejecuta el script incluido. **Sin flags, sin opciones de configuración.** El script auto-detecta el vídeo en la carpeta actual (o en la carpeta pasada como único argumento), lista las pistas con `ffprobe`, elige una y la vuelca con `ffmpeg` en copia directa.
 
 ## Cuándo usar esta skill
 
 - El usuario tiene un vídeo con subtítulos `subrip` incrustados y quiere un archivo `.srt` al lado.
-- Quiere específicamente subtítulos en español (latino, neutro o genérico) y, como último recurso, en inglés.
+- Quiere específicamente subtítulos en español (latino, neutro o genérico).
 
 NO usar esta skill cuando:
 
@@ -29,17 +29,11 @@ Se extrae **una sola pista**, la primera que cumpla este orden:
 1. **Español latino**: `language=spa` y el título de la pista contiene "latin" o "latino" (case-insensitive; p. ej. "Spanish (Latin American)").
 2. **Español neutro**: `language=spa` y el título contiene "neutral" o "neutro".
 3. **Español**: cualquier otra pista `spa` (la primera si hay varias).
-4. **Inglés**: cualquier pista `eng`; si hay varias, se prefiere la que NO sea SDH (título sin "SDH" ni "hearing impaired").
-5. **Ninguna**: no se extrae nada y se avisa: *"No se puede extraer ningún subtítulo .srt: no existen pistas subrip en español ni en inglés."* (exit code 4).
+4. **Ninguna**: no se extrae nada y se avisa: *"No se puede extraer ningún subtítulo .srt: no existe ninguna pista subrip en español."* (exit code 4).
 
 ## Convención de nombrado
 
-La única validación de nombrado es: ¿el nombre del vídeo contiene `2160p` (case-insensitive)?
-
-- **Vídeo 2160p** → la salida es `<video>.srt` (mismo nombre que el vídeo).
-- **Cualquier otro vídeo** → la salida es `<video>.es.srt` o `<video>.en.srt` según el idioma elegido.
-
-Solo se aceptan pistas con códec `subrip`, cuya salida siempre es `.srt`. Cualquier otro códec se descarta. Si el destino ya existe, se sobrescribe sin preguntar (decisión de diseño, igual que en `synchronize-subtitles`).
+La salida siempre es `<video>.es.srt`, sin excepciones por el nombre del vídeo. Solo se aceptan pistas españolas con códec `subrip`, cuya salida se normaliza a UTF-8 con BOM. Cualquier otro idioma o códec se descarta. Si el destino ya existe, se sobrescribe sin preguntar.
 
 ## Workflow
 
@@ -65,8 +59,9 @@ El script lo hace todo de extremo a extremo:
 
 - **Detección** automática; sin flags. Si el usuario pasa una carpeta, debe ser el único argumento posicional.
 - **Listado** de pistas con `ffprobe` (índice absoluto, códec, idioma, título) impreso en stdout.
-- **Selección** de una pista según la prioridad de arriba; el motivo elegido se imprime ("español latino", "inglés", ...).
+- **Selección** de una pista según la prioridad de arriba; el motivo elegido se imprime ("español latino", "español neutro" o "español").
 - **Extracción** con `ffmpeg -map 0:N -c:s copy` (copia directa, instantánea, sin pérdida). Coste: segundos.
+- **Codificación** del resultado como UTF-8 con BOM.
 - **Nombrado** según la convención anterior. Sobrescribe sin preguntar.
 
 ### 5. Verificar e informar
@@ -74,7 +69,7 @@ El script lo hace todo de extremo a extremo:
 - Mostrar la línea de resumen del propio script:
   - `OK -> <archivo>` — éxito, con el tamaño en bytes.
   - `ERROR: <razón>` — aborto, con la razón.
-  - Si el resultado es exit code 4, explicar al usuario que el vídeo no tiene pistas `.srt` (`subrip`) en español ni en inglés y que no se extrajo nada; las opciones son descargar el subtítulo (`search-subtitles`) o usar otra herramienta para convertir formatos.
+  - Si el resultado es exit code 4, explicar al usuario que el vídeo no tiene pistas `.srt` (`subrip`) en español y que no se extrajo nada; las opciones son descargar el subtítulo (`search-subtitles`) o usar otra herramienta para convertir formatos.
 
 ## Known pitfalls
 
@@ -88,12 +83,12 @@ El script lo hace todo de extremo a extremo:
 
 | Script | Propósito |
 | --- | --- |
-| `scripts/extract_subs.py` | Extractor. Auto-detecta el vídeo, elige UNA pista `subrip` por prioridad (español latino > español neutro > español > inglés) y la vuelca a `<video>.es.srt`/`<video>.en.srt` (o `<video>.srt` si es 2160p). Sin flags; acepta una carpeta opcional como único argumento. |
+| `scripts/extract_subs.py` | Extractor. Auto-detecta el vídeo, elige UNA pista española `subrip` por prioridad (español latino > español neutro > español), la vuelca a `<video>.es.srt` y la normaliza a UTF-8 con BOM. Sin flags; acepta una carpeta opcional como único argumento. |
 
 Exit codes:
 - `0` — éxito (pista extraída).
 - `1` — no hay vídeo en la carpeta.
 - `2` — error de uso (demasiados argumentos, carpeta inválida, varios vídeos).
 - `3` — `ffmpeg`/`ffprobe` no disponible o falló al listar pistas.
-- `4` — no hay pista `subrip` elegible (ni español ni inglés); no se extrajo nada.
+- `4` — no hay pista `subrip` elegible en español; no se extrajo nada.
 - `5` — la extracción falló.

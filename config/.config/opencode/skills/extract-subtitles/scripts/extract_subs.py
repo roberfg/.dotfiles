@@ -7,13 +7,12 @@ Uso:
 - Detecta automáticamente el vídeo (.mkv/.mp4/.avi/.mov/.m4v).
   Si hay varios, aborta (elección ambigua).
 - Lista las pistas de subtítulos con ffprobe y elige UNA pista subrip por prioridad:
-  español latino > español neutro > español > inglés.
+  español latino > español neutro > español.
 - Si no hay ninguna pista elegible, no extrae nada y avisa.
 - Extrae únicamente pistas subrip con ffmpeg en copia directa (sin conversión),
-  siempre como .srt. Descarta cualquier otro códec.
-- Nombra la salida <video>.es.srt o <video>.en.srt. Única validación
-  de nombrado: si el nombre del vídeo contiene "2160p" (case-insensitive),
-  la salida se llama igual que el vídeo (<video>.<ext>).
+  siempre como .srt. Descarta cualquier otro códec y cualquier idioma que no
+  sea español.
+ - Nombra siempre la salida <video>.es.srt.
 - Sobrescribe el destino sin preguntar.
 """
 from __future__ import annotations
@@ -34,19 +33,12 @@ if hasattr(sys.stdout, "reconfigure"):
 
 VIDEO_EXTS = ("mkv", "mp4", "avi", "mov", "m4v")
 
-# Única validación de nombrado: si el nombre del vídeo contiene "2160p"
-# (case-insensitive), la salida se llama igual que el vídeo (<video>.<ext>).
-_4K_MARKER = "2160p"
-
 # Único códec aceptado y extensión del archivo extraído.
 _SUBTITLE_CODEC = "subrip"
-_SUBTITLE_EXT = ".srt"
 
-# Patrones sobre el título de la pista para distinguir las variantes de
-# español y para detectar pistas SDH en inglés (se prefieren las normales).
+# Patrones sobre el título de la pista para distinguir las variantes de español.
 _LATINO_RE = re.compile(r"latin|latino", re.IGNORECASE)
 _NEUTRAL_RE = re.compile(r"neutral|neutro", re.IGNORECASE)
-_SDH_RE = re.compile(r"\bsdh\b|hearing impaired", re.IGNORECASE)
 
 
 @dataclass
@@ -101,16 +93,9 @@ def _make_writable(path: Path) -> None:
         pass
 
 
-def _target_name(video: Path, lang2: str, ext: str) -> Path:
-    """Devuelve la ruta destino del subtítulo extraído.
-
-    Única validación de nombrado: si el nombre del vídeo contiene "2160p"
-    (case-insensitive), la salida se llama igual que el vídeo
-    (<video>.srt); en cualquier otro caso, <video>.<lang2>.srt.
-    """
-    if _4K_MARKER in video.stem.lower():
-        return video.with_suffix(ext)
-    return video.with_name(video.stem + f".{lang2}{ext}")
+def _target_name(video: Path) -> Path:
+    """Devuelve siempre la ruta <video>.es.srt."""
+    return video.with_name(video.stem + ".es.srt")
 
 
 # ---------------------------------------------------------------------------
@@ -153,12 +138,11 @@ def _list_subtitle_streams(video: Path) -> list[SubtitleStream]:
 def _pick_stream(streams: list[SubtitleStream]) -> tuple[SubtitleStream | None, str, str]:
     """Elige UNA pista subrip por prioridad estricta de idioma.
 
-    Orden: español latino > español neutro > español > inglés.
+    Orden: español latino > español neutro > español.
     Devuelve (stream, lang2, motivo). Si no hay elegible, (None, "", "").
     """
     eligible = [s for s in streams if s.codec == _SUBTITLE_CODEC]
     spa = [s for s in eligible if s.language == "spa"]
-    eng = [s for s in eligible if s.language == "eng"]
 
     for s in spa:
         if _LATINO_RE.search(s.title):
@@ -168,10 +152,6 @@ def _pick_stream(streams: list[SubtitleStream]) -> tuple[SubtitleStream | None, 
             return s, "es", "español neutro"
     if spa:
         return spa[0], "es", "español"
-    if eng:
-        # Si hay varias en inglés, se prefiere la que no es SDH.
-        non_sdh = [s for s in eng if not _SDH_RE.search(s.title)]
-        return (non_sdh or eng)[0], "en", "inglés"
     return None, "", ""
 
 
@@ -198,6 +178,20 @@ def _extract(video: Path, stream: SubtitleStream, out_path: Path) -> tuple[bool,
     if not out_path.exists() or out_path.stat().st_size == 0:
         return False, "ffmpeg no escribió salida"
     return True, ""
+
+
+def _normalize_srt_encoding(path: Path) -> None:
+    """Reescribe el SRT siempre como UTF-8 con BOM."""
+    raw = path.read_bytes()
+    for encoding in ("utf-8-sig", "utf-8", "cp1252", "latin-1"):
+        try:
+            text = raw.decode(encoding)
+            break
+        except UnicodeDecodeError:
+            continue
+    else:
+        text = raw.decode("utf-8", errors="replace")
+    path.write_text(text, encoding="utf-8-sig")
 
 
 # ---------------------------------------------------------------------------
@@ -241,15 +235,15 @@ def main() -> int:
     else:
         print("El vídeo no tiene pistas de subtítulos.")
 
-    stream, lang2, reason = _pick_stream(streams)
+    stream, _, reason = _pick_stream(streams)
     if stream is None:
         print(
             "\nNo se puede extraer ningún subtítulo .srt: "
-            "no existen pistas subrip en español ni en inglés."
+            "no existe ninguna pista subrip en español."
         )
         return 4
 
-    target = _target_name(video, lang2, _SUBTITLE_EXT)
+    target = _target_name(video)
     title = stream.title or "(sin título)"
     print(f"\nPista elegida: #{stream.index} [{stream.language}] {title} -> {reason}")
     if target.exists():
@@ -259,6 +253,13 @@ def main() -> int:
     ok, detail = _extract(video, stream, target)
     if not ok:
         print(f"ERROR: extracción fallida: {detail}")
+        return 5
+
+    try:
+        _make_writable(target)
+        _normalize_srt_encoding(target)
+    except (OSError, UnicodeError) as e:
+        print(f"ERROR: no se pudo convertir {target.name} a UTF-8 con BOM: {e}")
         return 5
 
     print(f"\nOK -> {target.name} ({target.stat().st_size:,} bytes)")

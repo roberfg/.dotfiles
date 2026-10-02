@@ -2,6 +2,9 @@
   "$schema": "https://opencode.ai/config.json",
   "default_agent": "plan",
   "skills": {
+    "extract-subtitles": {
+      "path": "./skills/extract-subtitles/SKILL.md"
+    },
     "generate-api-requests": {
       "path": "./skills/generate-api-requests/SKILL.md"
     },

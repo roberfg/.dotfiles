@@ -1,14 +1,13 @@
 ---
 name: generate-api-requests
-description: Generate REST Client (.requests.http) and Bruno (opencollection.yml + .yml requests) files from project API routes
+description: Generate a Bruno collection (opencollection.yml + .yml requests) from project API routes
 ---
 
 ## What it does
 
 - Scans the current project to auto-detect the backend framework (Express, FastAPI, ASP.NET Core, Gin, Django, Spring Boot, etc.)
 - Parses all route definitions from controllers, routers, decorators, attributes, or annotations
-- Generates a `.requests.http` file at the project root with all endpoints in REST Client format
-- Generates a Bruno collection under `.docs/bruno/` with an `opencollection.yml` root and individual `.yml` request files
+- Generates a Bruno collection under `docs/api/` with an `opencollection.yml` root and individual `.yml` request files
 
 ## How it works
 
@@ -42,8 +41,7 @@ Rules
 | `PUT /users/:id`           | Update user by id  |
 | `DELETE /users/:userId`    | Delete user by id   |
 | `GET /products/:id/reviews`| Get reviews by product id |
-4. **Generate REST Client file**: Create `{project-name}.requests.http` at the project root with proper `###` separators
-5. **Generate Bruno collection**: Create `.docs/bruno/{project-name}/` with:
+4. **Generate Bruno collection**: Create `docs/api/{project-name}/` with:
    - `opencollection.yml` — collection root config
    - `{endpoint-name}.yml` — one file per endpoint with the request definition
 
@@ -80,9 +78,8 @@ settings:
 
 ```
 {project-root}/
-├── {project-name}.requests.http     # REST Client format
-└── .docs/
-    └── bruno/
+└── docs/
+    └── api/
         └── {project-name}/
             ├── opencollection.yml    # Collection metadata
             ├── Get ping.yml          # One .yml per endpoint
@@ -92,4 +89,4 @@ settings:
 
 ## When to use
 
-Use this when you need to quickly bootstrap or update HTTP request files from existing API route definitions in a project.
+Use this when you need to quickly bootstrap or update a Bruno collection from existing API route definitions in a project. Open the generated `docs/api/{project-name}/` directory in Bruno.

@@ -7,9 +7,7 @@ Uso:
 - Detecta automaticamente el video (.mkv/.mp4/.avi/.mov/.m4v) y el .srt.
 - Si hay varios de cualquiera, aborta (asociacion ambigua).
 - Ejecuta ffsubsync con los mismos flags y umbrales que search-subtitles.
-- Renombra el resultado a <basename>.es.srt. Unica validacion de nombrado:
-  si el nombre del video contiene "2160p" (case-insensitive), el .srt se
-  llama igual que el video (<basename>.srt).
+    - Renombra el resultado a <basename>.es.srt.
 - Si ffsubsync falla, conserva el .srt original y lo renombra igual.
 """
 from __future__ import annotations
@@ -29,10 +27,6 @@ if hasattr(sys.stdout, "reconfigure"):
 VIDEO_EXTS = ("mkv", "mp4", "avi", "mov", "m4v")
 SRT_EXT = ".srt"
 ALPHA2 = "es"
-
-# Unica validacion de nombrado: si el nombre del video contiene "2160p"
-# (case-insensitive), el .srt se llama igual que el video (<video>.srt).
-_4K_MARKER = "2160p"
 
 # Mismos umbrales que search-subtitles/scripts/download_subs.py
 _FFSUBSYNC_MIN_SCORE = 1000
@@ -105,14 +99,7 @@ def _make_writable(path: Path) -> None:
 
 
 def _target_name(video: Path) -> Path:
-    """Devuelve la ruta destino del .srt final.
-
-    Unica validacion de nombrado: si el nombre del video contiene "2160p"
-    (case-insensitive), el .srt se llama igual que el video (<video>.srt);
-    en cualquier otro caso, <video>.es.srt.
-    """
-    if _4K_MARKER in video.stem.lower():
-        return video.with_suffix(SRT_EXT)
+    """Devuelve siempre la ruta <video>.es.srt."""
     return video.with_name(video.stem + f".{ALPHA2}{SRT_EXT}")
 
 
@@ -121,10 +108,10 @@ def _target_name(video: Path) -> Path:
 # ---------------------------------------------------------------------------
 
 def _read_text_with_fallback(path: Path) -> str:
-    """Lee un .srt probando varios encodings y lo reescribe en UTF-8.
+    """Lee un .srt y lo reescribe siempre como UTF-8 con BOM.
 
-    Si el archivo no es UTF-8 valido, lo reescribimos en UTF-8 sin BOM para
-    que los pasos siguientes y los reproductores lo carguen sin problemas.
+    El uso de utf-8-sig elimina un BOM existente antes de escribirlo y evita
+    acumular varios BOM en ejecuciones repetidas.
     """
     raw = path.read_bytes()
     chosen = None
@@ -139,11 +126,7 @@ def _read_text_with_fallback(path: Path) -> str:
         text = raw.decode("utf-8", errors="replace")
         chosen = "utf-8"
 
-    if chosen in ("cp1252", "latin-1"):
-        try:
-            path.write_text(text, encoding="utf-8")
-        except OSError:
-            pass
+    path.write_text(text, encoding="utf-8-sig")
     return text
 
 
@@ -292,12 +275,11 @@ def main() -> int:
             "Se conserva el .srt original."
         )
 
-    # Asegurar encoding UTF-8 consistente en el .srt final (sea el original
-    # o el sincronizado).
+    # Asegurar UTF-8 con BOM en el .srt final (sea el original o el sincronizado).
+    _make_writable(srt)
     _read_text_with_fallback(srt)
 
-    # Renombrar al destino calculado (<video>.srt si es 2160p, si no
-    # <video>.es.srt).
+    # Renombrar siempre al destino <video>.es.srt.
     if srt.resolve() != target.resolve():
         if target.exists():
             _make_writable(target)
