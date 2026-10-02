@@ -42,10 +42,10 @@ end
 
 config.color_scheme = 'Tokyo Night Storm'
 
-config.window_decorations = 'RESIZE'
+config.window_decorations = 'TITLE | RESIZE'
 -- Fondo de la ventana semitransparente (0.9 = 90 % opaco)
 config.window_background_opacity = 0.95
-config.use_fancy_tab_bar = false
+config.use_fancy_tab_bar = true
 config.hide_tab_bar_if_only_one_tab = false
 
 config.window_padding = {
